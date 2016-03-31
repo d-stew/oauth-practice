@@ -12,7 +12,7 @@ var app = express();
 var cookieSession = require('cookie-session');
 require('dotenv').load()
 app.use(passport.initialize());
-app.use(passport.session({ secret: process.env.LINKEDIN_CLIENT_SECRET}));
+app.use(passport.session());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -23,21 +23,20 @@ app.set('view engine', 'hbs');
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieSession({name: 'user', keys: ['key1', 'key2'] }))
+app.use(cookieSession({name: 'user', secret: process.env.LINKEDIN_CLIENT_SECRET }))
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 passport.use(new LinkedInStrategy({
     clientID: process.env.LINKEDIN_CLIENT_ID,
     clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-    // callbackURL: "http://localhost:3000/auth/linkedin/callback",
     callbackURL: process.env.HOST + "/auth/linkedin/callback",
     scope: ['r_emailaddress', 'r_basicprofile'],
     state: true
   },
   function(accessToken, refreshToken, profile, done) {
     console.log(profile.displayName);
-    done(null, {id: profile.id, displayName: profile.displayName})
+    done(null, {id: profile.id, displayName: profile.displayName, token: accessToken})
   }));
 
 app.get('/auth/linkedin',
