@@ -23,9 +23,9 @@ app.set('view engine', 'hbs');
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieSession({name: 'user', keys: ['key1', 'key2'] }))
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(cookieSession({name: 'user', keys: ['key1', 'key2'] }))
 
 passport.use(new LinkedInStrategy({
     clientID: process.env.LINKEDIN_CLIENT_ID,
@@ -57,6 +57,7 @@ passport.serializeUser(function(user, done) {
 passport.deserializeUser(function(user, done) {
   done(null, user)
 });
+
 app.use(function (req, res, next) {
   res.locals.user = req.session.passport.user
   next()
