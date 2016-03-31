@@ -4,31 +4,15 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var passport = require('passport')
 var LinkedInStrategy = require('passport-linkedin-oauth2').Strategy;
-require('dotenv').load()
-
-passport.use(new LinkedInStrategy({
-  clientID: process.env.LINKEDIN_CLIENT_ID,
-  clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-  callbackURL: process.env.HOST + "/auth/linkedin/callback",
-  scope: ['r_emailaddress', 'r_basicprofile'],
-  state: true
-}, function(accessToken, refreshToken, profile, done) {
-  // asynchronous verification, for effect...
-  process.nextTick(function () {
-    // To keep the example simple, the user's LinkedIn profile is returned to
-    // represent the logged-in user. In a typical application, you would want
-    // to associate the LinkedIn account with a user record in your database,
-    // and return that user instead.
-    return done(null, profile);
-  });
-}));
-
 var routes = require('./routes/index');
 var users = require('./routes/users');
-
+var passport = require('passport');
 var app = express();
+var cookieSession = require('cookie-session');
+require('dotenv').load()
+app.use(passport.initialize());
+app.use(passport.session({ secret: process.env.LINKEDIN_CLIENT_SECRET}));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -41,19 +25,20 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(passport.initialize());
+app.use(cookieSession({name: 'user', keys: ['key1', 'key2'] }))
 
-// above app.use('/', routes);...
-passport.serializeUser(function(user, done) {
-  done(null, user);
-});
-
-passport.deserializeUser(function(user, done) {
-  done(null, user)
-});
-
-app.use('/', routes);
-app.use('/users', users);
+passport.use(new LinkedInStrategy({
+    clientID: process.env.LINKEDIN_CLIENT_ID,
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+    // callbackURL: "http://localhost:3000/auth/linkedin/callback",
+    callbackURL: process.env.HOST + "/auth/linkedin/callback",
+    scope: ['r_emailaddress', 'r_basicprofile'],
+    state: true
+  },
+  function(accessToken, refreshToken, profile, done) {
+    console.log(profile.displayName);
+    done(null, {id: profile.id, displayName: profile.displayName})
+  }));
 
 app.get('/auth/linkedin',
   passport.authenticate('linkedin'),
@@ -61,11 +46,24 @@ app.get('/auth/linkedin',
     // The request will be redirected to LinkedIn for authentication, so this
     // function will not be called.
   });
+  app.get('/auth/linkedin/callback', passport.authenticate('linkedin', {
+    successRedirect: '/',
+    failureRedirect: '/login'
+  }));
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
 
-app.get('/auth/linkedin/callback', passport.authenticate('linkedin', {
-  successRedirect: '/',
-  failureRedirect: '/login'
-}));
+passport.deserializeUser(function(user, done) {
+  done(null, user)
+});
+app.use(function (req, res, next) {
+  res.locals.user = req.session.passport.user
+  next()
+})
+
+app.use('/', routes);
+app.use('/users', users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
