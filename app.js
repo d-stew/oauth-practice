@@ -4,10 +4,10 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var passport = require('passport');
 var LinkedInStrategy = require('passport-linkedin-oauth2').Strategy;
 var routes = require('./routes/index');
 var users = require('./routes/users');
-var passport = require('passport');
 var app = express();
 var cookieSession = require('cookie-session');
 require('dotenv').load()
